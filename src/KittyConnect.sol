@@ -29,7 +29,7 @@ contract KittyConnect is ERC721 {
         string breed;
         string image;
         uint256 dob;
-        uint256[] prevOwner;
+        address[] prevOwner;
         address shopPartner;
         string latestRemarks;
     }
@@ -121,7 +121,7 @@ contract KittyConnect is ERC721 {
             breed: breed,
             image: catIpfsHash,
             dob: dob,
-            prevOwner: new uint256[](0),
+            prevOwner: new address[](0),
             shopPartner: msg.sender,
             latestRemarks: ""
         });
@@ -168,6 +168,8 @@ contract KittyConnect is ERC721 {
             revert KittyConnect__NewOwnerNotApproved();
         }
 
+        s_catInfo[tokenId].prevOwner.push(currCatOwner);
+
         emit CatTransferredToNewOwner(currCatOwner, newOwner, tokenId);
         _transfer(currCatOwner, newOwner, tokenId);
     }
@@ -183,6 +185,8 @@ contract KittyConnect is ERC721 {
         if (getApproved(tokenId) != newOwner) {
             revert KittyConnect__NewOwnerNotApproved();
         }
+
+        s_catInfo[tokenId].prevOwner.push(currCatOwner);
 
         emit CatTransferredToNewOwner(currCatOwner, newOwner, tokenId);
         _safeTransfer(currCatOwner, newOwner, tokenId, data);
