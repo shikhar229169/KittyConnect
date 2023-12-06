@@ -5,6 +5,12 @@ pragma solidity 0.8.19;
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { AggregatorV3Interface } from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
+/**
+ * @title KittyToken
+ * @author Shikhar Agarwal
+ * @notice This contract maintains the Kitty Tokens and allows users to purchase tokens in exchange of eth
+ * @notice Users needs to purchase Kitty Tokens in order to make payments for vet visits, etc.
+ */
 contract KittyToken is ERC20 {
     // errors
     error KittyToken__NotKittyConnect();
@@ -27,6 +33,11 @@ contract KittyToken is ERC20 {
         i_ethUsdcPriceFeeds = AggregatorV3Interface(ethUsdcPriceFeeds);
     }
 
+    /**
+     * @notice Users can buy KittyTokens for eth
+     * @notice KittyToken is used for making payments on KittyConnect
+     * @notice The price of KittyToken is same as the USDC price
+     */
     function mintKittyTokenForEth() external payable {
         if (msg.value == 0) {
             revert KittyToken__ZeroEthSent();

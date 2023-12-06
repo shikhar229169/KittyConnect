@@ -5,9 +5,17 @@ pragma solidity 0.8.19;
 import { ERC721 } from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import { Base64 } from "@openzeppelin/contracts/utils/Base64.sol";
 import { KittyToken } from "./KittyToken.sol";
- 
+
+/**
+ * @title KittyConnect
+ * @author Shikhar Agarwal
+ * @notice This contract allows users to buy a cute cat from our branches and mint NFT for buying a cat
+ * The NFT will be used to track the cat info and all related data for a particular cat corresponding to their token ids
+ * @notice Cat owners can also visit any partner shop for vet checkup and makes payment in KittyToken (the price of the token is same as USDC)
+ */
 contract KittyConnect is ERC721 {
     // Errors
+    error KittyConnect__NotKittyConnectOwner();
     error KittyConnect__AlreadyAPartner();
     error KittyConnect__NotAPartner();
     error KittyConnect__NewOwnerNotApproved();
@@ -28,6 +36,7 @@ contract KittyConnect is ERC721 {
 
     // Storage Variables
     uint256 kittyTokenCounter;
+    address private immutable i_kittyConnectOwner;
     mapping(address => bool) private s_isKittyShop;
     address[] private s_kittyShops;
     mapping(address user => uint256[]) private s_ownerToCatsTokenId;
@@ -37,9 +46,17 @@ contract KittyConnect is ERC721 {
     // Events
     event ShopPartnerAdded(address partner);
     event CatMinted(uint256 tokenId, string catIpfsHash);
-    event KittyConnect__TokensRedeemedForVetVisit(uint256 tokenId, uint256 amount, string remarks);
+    event TokensRedeemedForVetVisit(uint256 tokenId, uint256 amount, string remarks);
+    event CatTransferredToNewOwner(address prevOwner, address newOwner, uint256 tokenId);
 
     // Modifiers
+    modifier onlyKittyConnectOwner() {
+        if (msg.sender != i_kittyConnectOwner) {
+            revert KittyConnect__NotKittyConnectOwner();
+        }
+        _;
+    }
+
     modifier onlyShopPartner() {
         if (!s_isKittyShop[msg.sender]) {
             revert KittyConnect__NotAPartner();
@@ -54,13 +71,17 @@ contract KittyConnect is ERC721 {
             s_isKittyShop[initShops[i]] = true;
         }
 
+        i_kittyConnectOwner = msg.sender;
         i_kittyToken = new KittyToken(address(this), ethUsdcPriceFeeds);
     }
 
-
     // Functions
 
-    function addShop(address shopAddress) external {
+    /**
+     * @notice Allows the owner of the protocol to add a new shop partner
+     * @param shopAddress The address of new shop partner
+     */
+    function addShop(address shopAddress) external onlyKittyConnectOwner {
         if (s_isKittyShop[shopAddress]) {
             revert KittyConnect__AlreadyAPartner();
         }
@@ -70,6 +91,15 @@ contract KittyConnect is ERC721 {
         emit ShopPartnerAdded(shopAddress);
     }
 
+    /**
+     * @notice Allows the shop partners to mint a cat nft to owner when a purchase is made by user (cat owner)
+     * @param catOwner The owner of new cat
+     * @param catIpfsHash The image Ipfs Hash for the cat bought by catOwner
+     * @param catName Name of cat
+     * @param breed Breed of cat
+     * @param dob timestamp of date of birth of cat (in seconds)
+     * @dev Payments for the cat purchase takes off-chain and a corresponding NFT is minted to the owner which stores the info of cat
+     */
     function mintCatToNewOwner(
         address catOwner,
         string memory catIpfsHash,
@@ -100,6 +130,13 @@ contract KittyConnect is ERC721 {
         emit CatMinted(tokenId, catIpfsHash);
     }
 
+    /**
+     * @notice The shop partner will call this function to receive payments for the cat checkup by vet
+     * @param catOwner The owner of cat that came for vet visit at a pertner shop
+     * @param tokenId the token id of the cat the user brings for visit
+     * @param amount The cost in KittyTokens for vet fees
+     * @param remarks The remarks given by vet
+     */
     function redeemTokensForVetVisit(address catOwner, uint256 tokenId, uint256 amount, string memory remarks) external onlyShopPartner {
         if (_ownerOf(tokenId) != catOwner) {
             revert KittyConnect__NotKittyOwner();
@@ -112,9 +149,16 @@ contract KittyConnect is ERC721 {
         i_kittyToken.burnFrom(catOwner, amount);
         s_catInfo[tokenId].latestRemarks = remarks;
 
-        emit KittyConnect__TokensRedeemedForVetVisit(tokenId, amount, remarks);
+        emit TokensRedeemedForVetVisit(tokenId, amount, remarks);
     }
 
+    /**
+     * @notice Allows the shop partner to tranfer the ownership of cat to a new owner
+     * @notice First the current owner is required to approve the cat's token id to the newOwner
+     * @param currCatOwner The current cat owner corresponding to the cat's token id
+     * @param newOwner The new owner of cat
+     * @param tokenId The token id of cat
+     */
     function transferFrom(address currCatOwner, address newOwner, uint256 tokenId) public override onlyShopPartner {
         if (_ownerOf(tokenId) != currCatOwner) {
             revert KittyConnect__NotKittyOwner();
@@ -124,9 +168,13 @@ contract KittyConnect is ERC721 {
             revert KittyConnect__NewOwnerNotApproved();
         }
 
+        emit CatTransferredToNewOwner(currCatOwner, newOwner, tokenId);
         _transfer(currCatOwner, newOwner, tokenId);
     }
 
+    /**
+     * @notice Same as transferFrom but with additional data field
+     */
     function safeTransferFrom(address currCatOwner, address newOwner, uint256 tokenId, bytes memory data) public override onlyShopPartner {
         if (_ownerOf(tokenId) != currCatOwner) {
             revert KittyConnect__NotKittyOwner();
@@ -135,9 +183,15 @@ contract KittyConnect is ERC721 {
         if (getApproved(tokenId) != newOwner) {
             revert KittyConnect__NewOwnerNotApproved();
         }
+
+        emit CatTransferredToNewOwner(currCatOwner, newOwner, tokenId);
         _safeTransfer(currCatOwner, newOwner, tokenId, data);
     }
 
+    /**
+     * @notice Returns the age of cat in seconds
+     * @param tokenId The token id of cat
+     */
     function getCatAge(uint256 tokenId) external view returns (uint256) {
         if (!_exists(tokenId)) {
             revert KittyConnect__CatNotFound();
@@ -149,6 +203,10 @@ contract KittyConnect is ERC721 {
         return "data:application/json;base64,";
     }
 
+    /**
+     * @notice returns the token uri of the corresponding cat nft
+     * @param tokenId The token id of cat
+     */
     function tokenURI(uint256 tokenId) public view override returns (string memory) {
         CatInfo memory catInfo = s_catInfo[tokenId];
 
