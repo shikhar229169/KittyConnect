@@ -59,4 +59,12 @@ contract KittyToken is ERC20 {
     function burnFrom(address user, uint256 amount) external onlyKittyConnect {
         _burn(user, amount);
     }
+
+    function getEthUsdPriceFeed() external view returns (address) {
+        return address(i_ethUsdcPriceFeeds);
+    }
+
+    function getKittyConnectAddr() external view returns (address) {
+        return i_kittyConnect;
+    }
 }

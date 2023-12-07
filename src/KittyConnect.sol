@@ -4,6 +4,7 @@ pragma solidity 0.8.19;
 
 import { ERC721 } from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import { Base64 } from "@openzeppelin/contracts/utils/Base64.sol";
+import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 import { KittyToken } from "./KittyToken.sol";
 
 /**
@@ -29,9 +30,10 @@ contract KittyConnect is ERC721 {
         string breed;
         string image;
         uint256 dob;
-        uint256[] prevOwner;
+        address[] prevOwner;
         address shopPartner;
         string latestRemarks;
+        uint256 idx;
     }
 
     // Storage Variables
@@ -114,17 +116,18 @@ contract KittyConnect is ERC721 {
         uint256 tokenId = kittyTokenCounter;
         kittyTokenCounter++;
 
-        s_ownerToCatsTokenId[catOwner].push(tokenId);
-
         s_catInfo[tokenId] = CatInfo({
             catName: catName,
             breed: breed,
             image: catIpfsHash,
             dob: dob,
-            prevOwner: new uint256[](0),
+            prevOwner: new address[](0),
             shopPartner: msg.sender,
-            latestRemarks: ""
+            latestRemarks: "",
+            idx: s_ownerToCatsTokenId[catOwner].length
         });
+
+        s_ownerToCatsTokenId[catOwner].push(tokenId);
 
         _safeMint(catOwner, tokenId);
         emit CatMinted(tokenId, catIpfsHash);
@@ -168,6 +171,8 @@ contract KittyConnect is ERC721 {
             revert KittyConnect__NewOwnerNotApproved();
         }
 
+        updateOwnershipInfo(currCatOwner, newOwner, tokenId);
+
         emit CatTransferredToNewOwner(currCatOwner, newOwner, tokenId);
         _transfer(currCatOwner, newOwner, tokenId);
     }
@@ -184,20 +189,29 @@ contract KittyConnect is ERC721 {
             revert KittyConnect__NewOwnerNotApproved();
         }
 
+        updateOwnershipInfo(currCatOwner, newOwner, tokenId);
+
         emit CatTransferredToNewOwner(currCatOwner, newOwner, tokenId);
         _safeTransfer(currCatOwner, newOwner, tokenId, data);
     }
 
-    /**
-     * @notice Returns the age of cat in seconds
-     * @param tokenId The token id of cat
-     */
-    function getCatAge(uint256 tokenId) external view returns (uint256) {
-        if (!_exists(tokenId)) {
-            revert KittyConnect__CatNotFound();
+    // @audit currCatOwner != newOwner
+    function updateOwnershipInfo(address currCatOwner, address newOwner, uint256 tokenId) internal {
+        uint256 oldIdx = s_catInfo[tokenId].idx;
+        
+        s_catInfo[tokenId].prevOwner.push(currCatOwner);
+        s_catInfo[tokenId].idx = s_ownerToCatsTokenId[newOwner].length;
+        s_ownerToCatsTokenId[newOwner].push(tokenId);
+
+        uint256[] storage currOwnerTokens = s_ownerToCatsTokenId[currCatOwner];
+        uint256 lastItem = currOwnerTokens[currOwnerTokens.length - 1];
+        currOwnerTokens.pop();
+
+        if (currOwnerTokens.length > oldIdx) {
+            currOwnerTokens[oldIdx] = lastItem;
         }
-        return block.timestamp - s_catInfo[tokenId].dob;
     }
+
 
     function _baseURI() internal pure override returns (string memory) {
         return "data:application/json;base64,";
@@ -213,14 +227,61 @@ contract KittyConnect is ERC721 {
         string memory catTokenUri = Base64.encode(
             abi.encodePacked(
                 '{"name": "', catInfo.catName,
-                '","breed": "', catInfo.breed,
+                '", "breed": "', catInfo.breed,
                 '", "image": "', catInfo.image,
-                '", "dob": ', catInfo.dob,
-                ', "shopPartner": "', catInfo.shopPartner,
+                '", "dob": ', Strings.toString(catInfo.dob),
+                ', "owner": "', Strings.toHexString(_ownerOf(tokenId)),
+                '", "shopPartner": "', Strings.toHexString(catInfo.shopPartner),
                 '"}'
             )
         );
         return string.concat(_baseURI(), catTokenUri);
     }
+
+    /**
+     * @notice Returns the age of cat in seconds
+     * @param tokenId The token id of cat
+     */
+    function getCatAge(uint256 tokenId) external view returns (uint256) {
+        if (!_exists(tokenId)) {
+            revert KittyConnect__CatNotFound();
+        }
+        return block.timestamp - s_catInfo[tokenId].dob;
+    }
     
+    function getTokenCounter() external view returns (uint256) {
+        return kittyTokenCounter;
+    }
+
+    function getKittyConnectOwner() external view returns (address) {
+        return i_kittyConnectOwner;
+    }
+
+    function getAllKittyShops() external view returns (address[] memory) {
+        return s_kittyShops;
+    }
+
+    function getKittyShopAtIdx(uint256 idx) external view returns (address) {
+        return s_kittyShops[idx];
+    }
+
+    function getIsKittyPartnerShop(address partnerShop) external view returns (bool) {
+        return s_isKittyShop[partnerShop];
+    } 
+
+    function getKittyToken() external view returns (address) {
+        return address(i_kittyToken);
+    }
+
+    function getCatInfo(uint256 tokenId) external view returns (CatInfo memory) {
+        if (!_exists(tokenId)) {
+            revert KittyConnect__CatNotFound();
+        }
+
+        return s_catInfo[tokenId];
+    }
+
+    function getCatsTokenIdOwnedBy(address user) external view returns (uint256[] memory) {
+        return s_ownerToCatsTokenId[user];
+    }
 }
