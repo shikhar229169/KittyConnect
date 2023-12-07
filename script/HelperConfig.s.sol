@@ -3,6 +3,7 @@
 pragma solidity 0.8.19;
 
 import { Script } from "forge-std/Script.sol";
+import { MockV3Aggregator } from "@chainlink/contracts/src/v0.8/tests/MockV3Aggregator.sol";
 
 contract HelperConfig is Script {
     struct NetworkConfig{
@@ -20,7 +21,7 @@ contract HelperConfig is Script {
             networkConfig = getFujiConfig();
         }
         else {
-            networkConfig = getSepoliaConfig();
+            networkConfig = getAnvilConfig();
         }
     }
 
@@ -42,6 +43,17 @@ contract HelperConfig is Script {
 
         return NetworkConfig({
             ethUsdPriceFeed: 0x86d67c3D38D2bCeE722E601025C25a575021c6EA,
+            initShopPartners: shopPartners
+        });
+    }
+
+    function getAnvilConfig() internal returns (NetworkConfig memory) {
+        address[] memory shopPartners = new address[](2);
+        shopPartners[0] = 0x70997970C51812dc3A010C7d01b50e0d17dc79C8;
+        shopPartners[1] = 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC;
+
+        return NetworkConfig({
+            ethUsdPriceFeed: address(new MockV3Aggregator(8, 226549810000)),
             initShopPartners: shopPartners
         });
     }

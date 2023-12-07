@@ -37,7 +37,7 @@ contract KittyConnect is ERC721 {
     }
 
     // Storage Variables
-    uint256 kittyTokenCounter;
+    uint256 private kittyTokenCounter;
     address private immutable i_kittyConnectOwner;
     mapping(address => bool) private s_isKittyShop;
     address[] private s_kittyShops;
@@ -171,7 +171,7 @@ contract KittyConnect is ERC721 {
             revert KittyConnect__NewOwnerNotApproved();
         }
 
-        updateOwnershipInfo(currCatOwner, newOwner, tokenId);
+        _updateOwnershipInfo(currCatOwner, newOwner, tokenId);
 
         emit CatTransferredToNewOwner(currCatOwner, newOwner, tokenId);
         _transfer(currCatOwner, newOwner, tokenId);
@@ -189,14 +189,14 @@ contract KittyConnect is ERC721 {
             revert KittyConnect__NewOwnerNotApproved();
         }
 
-        updateOwnershipInfo(currCatOwner, newOwner, tokenId);
+        _updateOwnershipInfo(currCatOwner, newOwner, tokenId);
 
         emit CatTransferredToNewOwner(currCatOwner, newOwner, tokenId);
         _safeTransfer(currCatOwner, newOwner, tokenId, data);
     }
 
     // @audit currCatOwner != newOwner
-    function updateOwnershipInfo(address currCatOwner, address newOwner, uint256 tokenId) internal {
+    function _updateOwnershipInfo(address currCatOwner, address newOwner, uint256 tokenId) internal {
         uint256 oldIdx = s_catInfo[tokenId].idx;
         
         s_catInfo[tokenId].prevOwner.push(currCatOwner);
