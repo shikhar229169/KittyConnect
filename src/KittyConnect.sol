@@ -207,6 +207,10 @@ contract KittyConnect is ERC721 {
         return "data:application/json;base64,";
     }
 
+    function getIsKittyShop(address shopAddress) external view returns(bool){
+        return s_isKittyShop[shopAddress];
+    }
+
     /**
      * @notice returns the token uri of the corresponding cat nft
      * @param tokenId The token id of cat
@@ -226,5 +230,5 @@ contract KittyConnect is ERC721 {
         );
         return string.concat(_baseURI(), catTokenUri);
     }
-    
+
 }
