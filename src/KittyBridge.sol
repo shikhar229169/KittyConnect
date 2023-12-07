@@ -10,8 +10,8 @@ import {KittyConnect} from "./KittyConnect.sol";
 
 /**
  * @title KittyBridge
- * @author
- * @notice
+ * @author Shikhar Agarwal
+ * @notice This contract allows users to bridge their Kitty NFT from one chain to another chain via Chainlink CCIP
  */
 contract KittyBridge is CCIPReceiver, Ownable {
     error NotEnoughBalance(uint256 currentBalance, uint256 calculatedFees);
