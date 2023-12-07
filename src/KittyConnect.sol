@@ -6,6 +6,7 @@ import { ERC721 } from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import { Base64 } from "@openzeppelin/contracts/utils/Base64.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 import { KittyToken } from "./KittyToken.sol";
+import { KittyBridge } from "./KittyBridge.sol";
 
 /**
  * @title KittyConnect
@@ -24,6 +25,7 @@ contract KittyConnect is ERC721 {
     error KittyConnect__CatOwnerCantBeShopPartner();
     error KittyConnect__CatNotFound();
     error KittyConnect__InsufficientAllowance();
+    error KittyConnect__NotKittyBridge();
 
     struct CatInfo {
         string catName;
@@ -44,12 +46,15 @@ contract KittyConnect is ERC721 {
     mapping(address user => uint256[]) private s_ownerToCatsTokenId;
     mapping(uint256 tokenId => CatInfo) private s_catInfo;
     KittyToken private immutable i_kittyToken;
+    KittyBridge private immutable i_kittyBridge;
 
     // Events
     event ShopPartnerAdded(address partner);
     event CatMinted(uint256 tokenId, string catIpfsHash);
     event TokensRedeemedForVetVisit(uint256 tokenId, uint256 amount, string remarks);
     event CatTransferredToNewOwner(address prevOwner, address newOwner, uint256 tokenId);
+    event NFTBridgeRequestSent(uint256 sourceChainId, uint64 destChainSelector, address destBridge, uint256 tokenId);
+    event NFTBridged(uint256 chainId, uint256 tokenId);
 
     // Modifiers
     modifier onlyKittyConnectOwner() {
@@ -66,8 +71,15 @@ contract KittyConnect is ERC721 {
         _;
     }
 
+    modifier onlyKittyBridge() {
+        if (msg.sender != address(i_kittyBridge)) {
+            revert KittyConnect__NotKittyBridge();
+        }
+        _;
+    }
+
     // Constructor
-    constructor(address[] memory initShops,address ethUsdcPriceFeeds) ERC721("KittyConnect", "KC") {
+    constructor(address[] memory initShops,address ethUsdcPriceFeeds, address router, address link) ERC721("KittyConnect", "KC") {
         for (uint256 i = 0; i < initShops.length; i++) {
             s_kittyShops.push(initShops[i]);
             s_isKittyShop[initShops[i]] = true;
@@ -75,6 +87,7 @@ contract KittyConnect is ERC721 {
 
         i_kittyConnectOwner = msg.sender;
         i_kittyToken = new KittyToken(address(this), ethUsdcPriceFeeds);
+        i_kittyBridge = new KittyBridge(router, link, msg.sender);
     }
 
     // Functions
@@ -195,7 +208,63 @@ contract KittyConnect is ERC721 {
         _safeTransfer(currCatOwner, newOwner, tokenId, data);
     }
 
-    // @audit currCatOwner != newOwner
+    function bridgeNftToAnotherChain(uint64 destChainSelector, address destChainBridge, uint256 tokenId) external {
+        address catOwner = _ownerOf(tokenId);
+
+        if (msg.sender != catOwner) {
+            revert KittyConnect__NotKittyOwner();
+        }
+
+        CatInfo memory catInfo = s_catInfo[tokenId];
+        uint256 idx = catInfo.idx;
+        bytes memory data = abi.encode(catOwner, catInfo.catName, catInfo.breed, catInfo.image, catInfo.dob, catInfo.shopPartner);
+
+        _burn(tokenId);
+        delete s_catInfo[tokenId];
+
+        uint256[] memory userTokenIds = s_ownerToCatsTokenId[msg.sender];
+        uint256 lastItem = userTokenIds[userTokenIds.length - 1];
+
+        s_ownerToCatsTokenId[msg.sender].pop();
+
+        if (idx < (userTokenIds.length - 1)) {
+            s_ownerToCatsTokenId[msg.sender][idx] = lastItem;
+        }
+
+        emit NFTBridgeRequestSent(block.chainid, destChainSelector, destChainBridge, tokenId);
+        i_kittyBridge.bridgeNftWithData(destChainSelector, destChainBridge, data);
+    }
+
+    function mintBridgedNFT(bytes memory data) external onlyKittyBridge {
+        (
+            address catOwner, 
+            string memory catName, 
+            string memory breed, 
+            string memory imageIpfsHash, 
+            uint256 dob, 
+            address shopPartner
+        ) = abi.decode(data, (address, string, string, string, uint256, address));
+
+        uint256 tokenId = kittyTokenCounter;
+        kittyTokenCounter++;
+
+        s_catInfo[tokenId] = CatInfo({
+            catName: catName,
+            breed: breed,
+            image: imageIpfsHash,
+            dob: dob,
+            prevOwner: new address[](0),
+            shopPartner: shopPartner,
+            latestRemarks: "",
+            idx: s_ownerToCatsTokenId[catOwner].length
+        });
+
+        s_ownerToCatsTokenId[catOwner].push(tokenId);
+
+        emit NFTBridged(block.chainid, tokenId);
+        _safeMint(catOwner, tokenId);
+    }
+
     function _updateOwnershipInfo(address currCatOwner, address newOwner, uint256 tokenId) internal {
         uint256 oldIdx = s_catInfo[tokenId].idx;
         

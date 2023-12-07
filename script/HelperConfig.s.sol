@@ -9,6 +9,9 @@ contract HelperConfig is Script {
     struct NetworkConfig{
         address ethUsdPriceFeed;
         address[] initShopPartners;
+        address router;
+        address link;
+        uint64 chainSelector;
     }
 
     NetworkConfig private networkConfig;
@@ -32,7 +35,10 @@ contract HelperConfig is Script {
 
         return NetworkConfig({
             ethUsdPriceFeed: 0x694AA1769357215DE4FAC081bf1f309aDC325306,
-            initShopPartners: shopPartners
+            initShopPartners: shopPartners,
+            router: 0xD0daae2231E9CB96b94C8512223533293C3693Bf,
+            link: 0x779877A7B0D9E8603169DdbD7836e478b4624789,
+            chainSelector: 16015286601757825753
         });
     }
 
@@ -43,7 +49,10 @@ contract HelperConfig is Script {
 
         return NetworkConfig({
             ethUsdPriceFeed: 0x86d67c3D38D2bCeE722E601025C25a575021c6EA,
-            initShopPartners: shopPartners
+            initShopPartners: shopPartners,
+            router: 0x554472a2720E5E7D5D3C817529aBA05EEd5F82D8,
+            link: 0x0b9d5D9136855f6FEc3c0993feE6E9CE8a297846,
+            chainSelector: 14767482510784806043
         });
     }
 
@@ -54,7 +63,10 @@ contract HelperConfig is Script {
 
         return NetworkConfig({
             ethUsdPriceFeed: address(new MockV3Aggregator(8, 226549810000)),
-            initShopPartners: shopPartners
+            initShopPartners: shopPartners,
+            router: 0xD0daae2231E9CB96b94C8512223533293C3693Bf,
+            link: 0x779877A7B0D9E8603169DdbD7836e478b4624789,
+            chainSelector: 16015286601757825753
         });
     }
 
