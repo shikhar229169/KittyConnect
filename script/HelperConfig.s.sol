@@ -12,6 +12,7 @@ contract HelperConfig is Script {
         address router;
         address link;
         uint64 chainSelector;
+        uint64 otherChainSelector;
     }
 
     NetworkConfig private networkConfig;
@@ -38,7 +39,8 @@ contract HelperConfig is Script {
             initShopPartners: shopPartners,
             router: 0xD0daae2231E9CB96b94C8512223533293C3693Bf,
             link: 0x779877A7B0D9E8603169DdbD7836e478b4624789,
-            chainSelector: 16015286601757825753
+            chainSelector: 16015286601757825753,
+            otherChainSelector: 14767482510784806043
         });
     }
 
@@ -52,7 +54,8 @@ contract HelperConfig is Script {
             initShopPartners: shopPartners,
             router: 0x554472a2720E5E7D5D3C817529aBA05EEd5F82D8,
             link: 0x0b9d5D9136855f6FEc3c0993feE6E9CE8a297846,
-            chainSelector: 14767482510784806043
+            chainSelector: 14767482510784806043,
+            otherChainSelector: 16015286601757825753
         });
     }
 
@@ -66,7 +69,8 @@ contract HelperConfig is Script {
             initShopPartners: shopPartners,
             router: 0xD0daae2231E9CB96b94C8512223533293C3693Bf,
             link: 0x779877A7B0D9E8603169DdbD7836e478b4624789,
-            chainSelector: 16015286601757825753
+            chainSelector: 16015286601757825753,
+            otherChainSelector: 14767482510784806043
         });
     }
 

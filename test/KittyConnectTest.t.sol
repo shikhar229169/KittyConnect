@@ -7,10 +7,12 @@ import { DeployKittyConnect } from "../script/DeployKittyConnect.s.sol";
 import { HelperConfig } from "../script/HelperConfig.s.sol";
 import { KittyConnect, KittyToken } from "../src/KittyConnect.sol";
 import { AggregatorV3Interface } from "../src/KittyToken.sol";
+import { KittyBridge, Client } from "../src/KittyBridge.sol";
 
 contract KittyConnectTest is Test {
     KittyConnect kittyConnect;
     KittyToken kittyToken;
+    KittyBridge kittyBridge;
     HelperConfig helperConfig;
     HelperConfig.NetworkConfig networkConfig;
     address kittyConnectOwner;
@@ -34,6 +36,7 @@ contract KittyConnectTest is Test {
         partnerA = kittyConnect.getKittyShopAtIdx(0);
         partnerB = kittyConnect.getKittyShopAtIdx(1);
         kittyToken = KittyToken(kittyConnect.getKittyToken());
+        kittyBridge = KittyBridge(kittyConnect.getKittyBridge());
         user = makeAddr("user");
     }
 
@@ -182,5 +185,24 @@ contract KittyConnectTest is Test {
         uint256 expectedAmount = (currentPrice * amount) / 1e18;
 
         assertEq(kittyToken.balanceOf(address(this)), expectedAmount);
+    }
+
+    function test_gasForCcipReceive() public {
+        address sender = makeAddr("sender");
+        bytes memory data = abi.encode(makeAddr("catOwner"), "meowdy", "ragdoll", "ipfs://QmbxwGgBGrNdXPm84kqYskmcMT3jrzBN8LzQjixvkz4c62", block.timestamp, partnerA);
+
+        vm.prank(kittyConnectOwner);
+        kittyBridge.allowlistSender(sender, true);
+
+        Client.Any2EVMMessage memory message = Client.Any2EVMMessage({
+            messageId: bytes32(0),
+            sourceChainSelector: networkConfig.otherChainSelector,
+            sender: abi.encode(sender),
+            data: data,
+            destTokenAmounts: new Client.EVMTokenAmount[](0)
+        });
+
+        vm.prank(networkConfig.router);
+        kittyBridge.ccipReceive(message);
     }
 }

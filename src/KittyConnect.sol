@@ -353,4 +353,8 @@ contract KittyConnect is ERC721 {
     function getCatsTokenIdOwnedBy(address user) external view returns (uint256[] memory) {
         return s_ownerToCatsTokenId[user];
     }
+
+    function getKittyBridge() external view returns (address) {
+        return address(i_kittyBridge);
+    }
 }

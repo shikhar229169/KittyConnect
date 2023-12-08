@@ -48,6 +48,7 @@ contract KittyBridge is CCIPReceiver, Ownable {
 
     bytes32 private s_lastReceivedMessageId; // Store the last received messageId.
     string private s_lastReceivedText; // Store the last received text.
+    uint256 private gaslimit;
 
     // Mapping to keep track of allowlisted destination chains.
     mapping(uint64 => bool) public allowlistedDestinationChains;
@@ -72,6 +73,7 @@ contract KittyBridge is CCIPReceiver, Ownable {
     constructor(address _router, address _link, address kittyConnectOwner) CCIPReceiver(_router) Ownable(kittyConnectOwner) {
         s_linkToken = IERC20(_link);
         i_kittyConnect = msg.sender;
+        gaslimit = 400000;
     }
 
     /// @dev Modifier that checks if the chain with the given destinationChainSelector is allowlisted.
@@ -219,7 +221,7 @@ contract KittyBridge is CCIPReceiver, Ownable {
         address _receiver,
         bytes memory _data,
         address _feeTokenAddress
-    ) internal pure returns (Client.EVM2AnyMessage memory) {
+    ) internal view returns (Client.EVM2AnyMessage memory) {
         // Create an EVM2AnyMessage struct in memory with necessary information for sending a cross-chain message
         return
             Client.EVM2AnyMessage({
@@ -228,7 +230,7 @@ contract KittyBridge is CCIPReceiver, Ownable {
                 tokenAmounts: new Client.EVMTokenAmount[](0), // Empty array aas no tokens are transferred
                 extraArgs: _argsToBytes(
                     // Additional arguments, setting gas limit and non-strict sequencing mode
-                    EVMExtraArgsV1({gasLimit: 200_000, strict: false})
+                    EVMExtraArgsV1({gasLimit: gaslimit, strict: false})
                 ),
                 // Set the feeToken to a feeTokenAddress, indicating specific asset will be used for fees
                 feeToken: _feeTokenAddress
@@ -249,11 +251,6 @@ contract KittyBridge is CCIPReceiver, Ownable {
     {
         return (s_lastReceivedMessageId, s_lastReceivedText);
     }
-
-    /// @notice Fallback function to allow the contract to receive Ether.
-    /// @dev This function has no function body, making it a default function for receiving Ether.
-    /// It is automatically called when Ether is sent to the contract without any data.
-    receive() external payable {}
 
     /// @notice Allows the contract owner to withdraw the entire balance of Ether from the contract.
     /// @dev This function reverts if there are no funds to withdraw or if the transfer fails.
@@ -288,5 +285,9 @@ contract KittyBridge is CCIPReceiver, Ownable {
         if (amount == 0) revert NothingToWithdraw();
 
         IERC20(_token).transfer(_beneficiary, amount);
+    }
+
+    function updateGaslimit(uint256 gasLimit) external onlyOwner {
+        gaslimit = gasLimit;
     }
 }
