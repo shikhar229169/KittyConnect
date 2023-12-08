@@ -13,7 +13,7 @@ contract DeployKittyConnect is Script {
         HelperConfig helperConfig = new HelperConfig();
         HelperConfig.NetworkConfig memory networkConfig = helperConfig.getNetworkConfig();
         KittyBridge kittyBridge;
-        uint256 linkBalance = 5 ether;   // 5 link
+        uint256 linkBalance = 8 ether;   // 5 link
 
         vm.startBroadcast();
 
@@ -24,7 +24,7 @@ contract DeployKittyConnect is Script {
         kittyBridge.allowlistDestinationChain(networkConfig.otherChainSelector, true);
         kittyBridge.allowlistSourceChain(networkConfig.otherChainSelector, true);
         
-        // IERC20(networkConfig.link).transfer(address(kittyBridge), linkBalance);
+        IERC20(networkConfig.link).transfer(address(kittyBridge), linkBalance);
 
         vm.stopBroadcast();
 

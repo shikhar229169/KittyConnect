@@ -4,6 +4,7 @@ pragma solidity 0.8.19;
 
 import { Script } from "forge-std/Script.sol";
 import { MockV3Aggregator } from "@chainlink/contracts/src/v0.8/tests/MockV3Aggregator.sol";
+import { MockLinkToken } from "@chainlink/contracts/src/v0.8/mocks/MockLinkToken.sol";
 
 contract HelperConfig is Script {
     struct NetworkConfig{
@@ -64,11 +65,17 @@ contract HelperConfig is Script {
         shopPartners[0] = 0x70997970C51812dc3A010C7d01b50e0d17dc79C8;
         shopPartners[1] = 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC;
 
+        vm.startBroadcast();
+
+        MockLinkToken mockLinkToken = new MockLinkToken();
+
+        vm.stopBroadcast();
+
         return NetworkConfig({
             ethUsdPriceFeed: address(new MockV3Aggregator(8, 226549810000)),
             initShopPartners: shopPartners,
             router: 0xD0daae2231E9CB96b94C8512223533293C3693Bf,
-            link: 0x779877A7B0D9E8603169DdbD7836e478b4624789,
+            link: address(mockLinkToken),
             chainSelector: 16015286601757825753,
             otherChainSelector: 14767482510784806043
         });
