@@ -6,13 +6,19 @@ import {KittyToken} from "./KittyToken.sol";
 import {KittyInsurance} from "./KittyInsurance.sol";
 import {KittyConnect} from "./KittyConnect.sol";
 
+/**
+ * @title KittyInsuranceProvider
+ * @author Naman Gautam
+ * @notice This contract is responsible for providing insurance to the Kitty Owners from Policy Holder.
+ * This contract deploy by the shop partner's within 15 day's (included) of the buying of the cat.
+ */
 contract KittyInsuranceProvider {
     // Errors
-    error KittyInsurance__NotPolicyHolder();
-    error KittyInsurance__OfferTimeExpired();
-    error KittyInsurance__NotInsuranceContract();
-    error KittyInsurance__OfferTimeNotExpired();
-    error KittyInsurance__AlreadyIssued();
+    error KittyInsuranceProvider__NotPolicyHolder();
+    error KittyInsuranceProvider__OfferTimeExpired();
+    error KittyInsuranceProvider__NotInsuranceContract();
+    error KittyInsuranceProvider__OfferTimeNotExpired();
+    error KittyInsuranceProvider__AlreadyIssued();
 
     // Storage Variables
     address private immutable i_policyHolder;
@@ -29,7 +35,7 @@ contract KittyInsuranceProvider {
     // Modifiers
     modifier onlyPolicyHolder() {
         if (msg.sender != i_policyHolder) {
-            revert KittyInsurance__NotPolicyHolder();
+            revert KittyInsuranceProvider__NotPolicyHolder();
         }
         _;
     }
@@ -42,6 +48,18 @@ contract KittyInsuranceProvider {
     }
 
     // Functions
+
+    /**
+     * @notice This function deploy KittyInsurance to initiate the insurance protocol and also mark true in the isPolicyActive mapping
+     * corresponding to the tokenId and also map the KittyInsurance address to the tokenId in tokenIdToInsuranceContract mapping
+     *
+     * @param _kittyOwner Cat Owner After the buying of cat
+     * @param _premiumAmount Premium Amount of the Insurance
+     * @param _coverageAmount Coverage Amount of the Insurance
+     * @param _isOneYear It take bool
+     * @param _tokenAddress It takes address of the KittyToken Contract
+     * @param _tokenId It takes tokenId to the corresponding to the cat.
+     */
     function provideInsurance(
         address _kittyOwner,
         uint256 _premiumAmount,
@@ -51,11 +69,11 @@ contract KittyInsuranceProvider {
         uint256 _tokenId
     ) external onlyPolicyHolder {
         if (i_kittyConnect.getCatAge(_tokenId) > 15 * ONE_DAY) {
-            revert KittyInsurance__OfferTimeExpired();
+            revert KittyInsuranceProvider__OfferTimeExpired();
         }
 
         if (isPolicyActive[_tokenId]) {
-            revert KittyInsurance__AlreadyIssued();
+            revert KittyInsuranceProvider__AlreadyIssued();
         }
 
         KittyInsurance insuranceContract = new KittyInsurance(
@@ -77,13 +95,26 @@ contract KittyInsuranceProvider {
         emit InsuranceProvided(msg.sender, address(insuranceContract));
     }
 
+    /**
+     * @notice This function allows KittyInsurance to change the active status to the false in order to end the insurance after calling claim in KittyInsurance
+     *
+     * @param tokenId Token Id corresponding to the Cat NFT
+     * @param isActive always come with false from the KittyInsurance claim function
+     */
     function setPolicyActive(uint256 tokenId, bool isActive) external {
         if (msg.sender != tokenIdToInsuranceContract[tokenId]) {
-            revert KittyInsurance__NotInsuranceContract();
+            revert KittyInsuranceProvider__NotInsuranceContract();
         }
         isPolicyActive[tokenId] = isActive;
         emit InsuranceCompleted(tokenId);
     }
+
+    /**
+     * @notice This function allows Policy Holder to change the active status to the false in order to end the insurance after the expiration of the insurance
+     *
+     * @param policyAddress It takes the address of the KittyInsurance Contract
+     * @param tokenId It takes the tokenId corresponding to the Cat NFT
+     */
 
     function setPolicyActiveAfterExpiration(address policyAddress, uint256 tokenId) external onlyPolicyHolder {
         KittyInsurance insuranceContract = KittyInsurance(policyAddress);
@@ -91,9 +122,25 @@ contract KittyInsuranceProvider {
             insuranceContract.getExpirationTimestamp() < block.timestamp
                 && insuranceContract.getTotalPremiumPaidByOwner() != insuranceContract.getNetPremiumToBepaid()
         ) {
-            revert KittyInsurance__OfferTimeNotExpired();
+            revert KittyInsuranceProvider__OfferTimeNotExpired();
         }
         isPolicyActive[tokenId] = false;
         emit InsuranceCompleted(tokenId);
+    }
+
+    function getTokenIdToInsuranceContract(uint256 tokenId) external view returns (address) {
+        return tokenIdToInsuranceContract[tokenId];
+    }
+
+    function getPolicyHolder() external view returns (address) {
+        return i_policyHolder;
+    }
+
+    function getKittyConnect() external view returns (address) {
+        return address(i_kittyConnect);
+    }
+
+    function getKittyToken() external view returns (address) {
+        return address(i_kittyToken);
     }
 }

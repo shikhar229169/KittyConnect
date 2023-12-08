@@ -6,6 +6,12 @@ import {KittyToken} from "./KittyToken.sol";
 import {KittyConnect} from "./KittyConnect.sol";
 import {KittyInsuranceProvider} from "./KittyInsuranceProvider.sol";
 
+/**
+ * @title KittyInsurance
+ * @author Naman Gautam
+ * @notice This contract is responsible for paying the premium amount to the Policy Holder from the Kitty Owner and also allow the Kitty Owner
+ * to claim the coverage amount.
+ */
 contract KittyInsurance {
     // Errors
     error KittyInsurance__NotPolicyHolder();
@@ -128,6 +134,12 @@ contract KittyInsurance {
 
     // Functions
 
+    /**
+     * @notice This function is responsible for paying the premium amount to the Policy Holder from the Kitty Owner. But, it can only be called in the 1 year policy
+     * @notice It also approves the KittyToken contract to transfer the premium amount from the Kitty Owner to the Policy Holder and also update the totalPremiumPaidByOwner
+     *
+     * @param amount It takes the amount of the premium to be paid by the Kitty Owner
+     */
     function payPremiumForOneYearPolicy(uint256 amount) external onlyKittyOwner PremiumPaid oneYear {
         totalPremiumPaidByOwner += amount;
         i_kittyToken.approve(i_policyHolder, amount);
@@ -135,6 +147,12 @@ contract KittyInsurance {
         emit PolicyAmountPaid(i_policyHolder, amount);
     }
 
+    /**
+     * @notice This function is responsible for paying the premium amount to the Policy Holder from the Kitty Owner.  But it can only be called in the 6 months policy
+     * @notice It also approves the KittyToken contract to transfer the premium amount from the Kitty Owner to the Policy Holder and also update the totalPremiumPaidByOwner
+     *
+     * @param amount It takes the amount of the premium to be paid by the Kitty Owner
+     */
     function payPremiumForSixMonthPolicy(uint256 amount) external onlyKittyOwner PremiumPaid sixMonths {
         totalPremiumPaidByOwner += amount;
         i_kittyToken.approve(i_policyHolder, amount);
@@ -142,10 +160,15 @@ contract KittyInsurance {
         emit PolicyAmountPaid(i_policyHolder, amount);
     }
 
+    /**
+     * @notice This function is responsible for paying the coverage amount to the Kitty Owner from the Policy Holder. But it can only be called by the shop partner's
+     * @notice It also approves the KittyToken contract to transfer the coverage amount from the Policy Holder to the Kitty Owner
+     */
+
     function claim() external onlyShopPartner notExpired notClaimed {
         uint256 payoutAmount = coverageAmount;
 
-        i_kittyToken.transferFrom(i_policyHolder, i_kittyOwner, payoutAmount);
+        i_kittyToken.approve(i_kittyOwner, payoutAmount);
 
         isClaimed = true;
         i_insuranceProvider.setPolicyActive(tokenId, false);
@@ -165,4 +188,39 @@ contract KittyInsurance {
         return netPremiumToBepaid;
     }
 
+    function getPolicyHolder() external view returns (address) {
+        return i_policyHolder;
+    }
+
+    function getKittyConnect() external view returns (address) {
+        return address(i_kittyConnect);
+    }
+
+    function getKittyToken() external view returns (address) {
+        return address(i_kittyToken);
+    }
+
+    function getKittyOwner() external view returns (address) {
+        return i_kittyOwner;
+    }
+
+    function getIsOneYear() external view returns (bool) {
+        return isOneYear;
+    }
+
+    function getPremiumAmount() external view returns (uint256) {
+        return premiumAmount;
+    }
+
+    function getCoverageAmount() external view returns (uint256) {
+        return coverageAmount;
+    }
+
+    function getIsClaimed() external view returns (bool) {
+        return isClaimed;
+    }
+
+    function getTokenId() external view returns (uint256) {
+        return tokenId;
+    }
 }
