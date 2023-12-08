@@ -317,10 +317,6 @@ contract KittyConnect is ERC721 {
         }
         return block.timestamp - s_catInfo[tokenId].dob;
     }
-
-    function getIsKittyShop(address partnerShop) external view returns (bool) {
-        return s_isKittyShop[partnerShop];
-    }
     
     function getTokenCounter() external view returns (uint256) {
         return kittyTokenCounter;

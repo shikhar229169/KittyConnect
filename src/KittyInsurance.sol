@@ -72,7 +72,7 @@ contract KittyInsurance {
     }
 
     modifier onlyShopPartner() {
-        if (!i_kittyConnect.getIsKittyShop(msg.sender)) {
+        if (!i_kittyConnect.getIsKittyPartnerShop(msg.sender)) {
             revert KittyConnect__NotShopPartner();
         }
         _;
