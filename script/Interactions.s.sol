@@ -38,26 +38,12 @@ contract BridgeNFT is Script {
 
         vm.startBroadcast();
 
-        KittyConnect(avKittyConnect).bridgeNftToAnotherChain(networkConfig.otherChainSelector, sepoliaBridge, tokenId);
-
-        vm.stopBroadcast();
-    }
-}
-
-contract BridgeNFTDiff is Script {
-    function run() external {
-        address avBridge = 0xE69372fC03e2B23E40B150C073B2ADa19bB24Bd6;
-        address sepoliaBridge = 0xb52a9b20423197784f5b42209dB453efA68FD89F;
-        address avKittyConnect = 0x8F1D72776F7bA4a8208749f30B7c96C2A3b59DD2;
-        address sepoliaKittyConnect = 0xCd07002bd7350cBe5fcD94b5179C15cF1Bf41CfA;
-
-        HelperConfig helperConfig = new HelperConfig();
-        HelperConfig.NetworkConfig memory networkConfig = helperConfig.getNetworkConfig();
-        uint256 tokenId = 0;
-
-        vm.startBroadcast();
-
-        KittyConnect(sepoliaKittyConnect).bridgeNftToAnotherChain(networkConfig.otherChainSelector, avBridge, tokenId);
+        if (block.chainid == 43113) {
+            KittyConnect(avKittyConnect).bridgeNftToAnotherChain(networkConfig.otherChainSelector, sepoliaBridge, tokenId);
+        }
+        else {
+            KittyConnect(sepoliaKittyConnect).bridgeNftToAnotherChain(networkConfig.otherChainSelector, avBridge, tokenId);      
+        }
 
         vm.stopBroadcast();
     }
