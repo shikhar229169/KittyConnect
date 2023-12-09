@@ -60,6 +60,44 @@ contract KittyConnectTest is Test {
         kittyConnect.mintCatToNewOwner(user, catImageIpfsHash, "Hehe", "Hehe", block.timestamp);
     }
 
+    function test_mintCatToNewOwnerIfCatOwnerIsShopPartner() public {
+        string memory catImageIpfsHash = "ipfs://QmbxwGgBGrNdXPm84kqYskmcMT3jrzBN8LzQjixvkz4c62";
+
+        vm.expectRevert(KittyConnect.KittyConnect__CatOwnerCantBeShopPartner.selector);
+        vm.prank(partnerA);
+        kittyConnect.mintCatToNewOwner(partnerB, catImageIpfsHash, "Hehe", "Hehe", block.timestamp);
+    }
+
+    function test_redeemTokensForVetVisitRevetIfInsufficientAllowance() public {
+        string memory catImageIpfsHash = "ipfs://QmbxwGgBGrNdXPm84kqYskmcMT3jrzBN8LzQjixvkz4c62";
+        uint256 tokenId = kittyConnect.getTokenCounter();
+
+        vm.prank(partnerA);
+        kittyConnect.mintCatToNewOwner(user, catImageIpfsHash, "Meowdy", "Ragdoll", block.timestamp);
+        vm.stopPrank();
+
+        vm.expectRevert(KittyConnect.KittyConnect__InsufficientAllowance.selector);
+        vm.prank(partnerA);
+        kittyConnect.redeemTokensForVetVisit(user, tokenId, 1, "Cat is healthy");
+        vm.stopPrank();
+    }
+
+    function test_redeemTokensForVetVisitRvertsIfCallerIsNotShopPartner() public {
+        string memory catImageIpfsHash = "ipfs://QmbxwGgBGrNdXPm84kqYskmcMT3jrzBN8LzQjixvkz4c62";
+        uint256 tokenId = kittyConnect.getTokenCounter();
+        address attacker = makeAddr("attacker");
+
+        vm.prank(partnerA);
+        kittyConnect.mintCatToNewOwner(user, catImageIpfsHash, "Meowdy", "Ragdoll", block.timestamp);
+
+        vm.stopPrank();
+
+        vm.expectRevert(KittyConnect.KittyConnect__NotAPartner.selector);
+        vm.prank(attacker);
+        kittyConnect.redeemTokensForVetVisit(user, tokenId, 1, "Cat is healthy");
+        vm.stopPrank();
+    }
+
     function test_ShopPartnerGivesCatToCustomer() public {
         string memory catImageIpfsHash = "ipfs://QmbxwGgBGrNdXPm84kqYskmcMT3jrzBN8LzQjixvkz4c62";
         vm.warp(block.timestamp + 10 weeks);
@@ -87,6 +125,20 @@ contract KittyConnectTest is Test {
         assertEq(catInfo.idx, 0);
     }
 
+    function test_getCatAge() public {
+        string memory catImageIpfsHash = "ipfs://QmbxwGgBGrNdXPm84kqYskmcMT3jrzBN8LzQjixvkz4c62";
+        uint256 tokenId = kittyConnect.getTokenCounter();
+
+        vm.prank(partnerA);
+        kittyConnect.mintCatToNewOwner(user, catImageIpfsHash, "Meowdy", "Ragdoll", block.timestamp);
+        
+        vm.warp(block.timestamp + 10 weeks);
+        vm.prank(user);
+        uint256 catAge = kittyConnect.getCatAge(tokenId);
+
+        assertEq(catAge, 10 weeks);
+    }
+
     function test_onlyKittyConnectOwnerCanAddNewPartnerShop() public {
         address partnerC = makeAddr("partnerC");
 
@@ -97,12 +149,35 @@ contract KittyConnectTest is Test {
         assertEq(kittyConnect.getKittyShopAtIdx(2), partnerC);
     }
 
+    function test_revertIfCallerIsAlreadyPartner() public {
+        address partnerC = makeAddr("partnerC");
+
+        vm.prank(kittyConnectOwner);
+        kittyConnect.addShop(partnerC);
+
+        vm.expectRevert(KittyConnect.KittyConnect__AlreadyAPartner.selector);
+        vm.prank(kittyConnectOwner);
+        kittyConnect.addShop(partnerC);
+    }
+
     function test_revertsIfCallerIsNotKittyConnectOwner() public {
         address partnerC = makeAddr("partnerC");
 
         vm.expectRevert(KittyConnect.KittyConnect__NotKittyConnectOwner.selector);
         vm.prank(partnerC);
         kittyConnect.addShop(partnerC);
+    }
+
+    function test_tokenURI() public {
+        string memory catImageIpfsHash = "ipfs://QmbxwGgBGrNdXPm84kqYskmcMT3jrzBN8LzQjixvkz4c62";
+        string memory expectedTokenURI = "data:application/json;base64,eyJuYW1lIjogIiIsICJicmVlZCI6ICIiLCAiaW1hZ2UiOiAiIiwgImRvYiI6IDAsICJvd25lciI6ICIweDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAiLCAic2hvcFBhcnRuZXIiOiAiMHgwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwIn0=";
+        vm.prank(partnerA);
+        kittyConnect.mintCatToNewOwner(user, catImageIpfsHash, "Meowdy", "Ragdoll", block.timestamp);
+
+        uint256 tokenId = kittyConnect.getTokenCounter();
+        string memory tokenUri = kittyConnect.tokenURI(tokenId);
+
+        assertEq(tokenUri, expectedTokenURI);
     }
 
     modifier partnerGivesCatToOwner() {
@@ -168,9 +243,37 @@ contract KittyConnectTest is Test {
         kittyConnect.transferFrom(user, newOwner, tokenId);
     }
 
+    function test_safetransferCatToNewOwner() public {
+        string memory catImageIpfsHash = "ipfs://QmbxwGgBGrNdXPm84kqYskmcMT3jrzBN8LzQjixvkz4c62";
+        uint256 tokenId = kittyConnect.getTokenCounter();
+        address newOwner = makeAddr("newOwner");
 
+        vm.prank(partnerA);
+        kittyConnect.mintCatToNewOwner(user, catImageIpfsHash, "Meowdy", "Ragdoll", block.timestamp);
+
+        vm.prank(user);
+        kittyConnect.approve(newOwner, tokenId);
+
+        vm.expectEmit(false, false, false, true, address(kittyConnect));
+        emit CatTransferredToNewOwner(user, newOwner, tokenId);
+        vm.prank(partnerA);
+        kittyConnect.safeTransferFrom(user, newOwner, tokenId);
+
+        assertEq(kittyConnect.ownerOf(tokenId), newOwner);
+        assertEq(kittyConnect.getCatsTokenIdOwnedBy(user).length, 0);
+        assertEq(kittyConnect.getCatsTokenIdOwnedBy(newOwner).length, 1);
+        assertEq(kittyConnect.getCatsTokenIdOwnedBy(newOwner)[0], tokenId);
+        assertEq(kittyConnect.getCatInfo(tokenId).prevOwner[0], user);
+        assertEq(kittyConnect.getCatInfo(tokenId).prevOwner.length, 1);
+        assertEq(kittyConnect.getCatInfo(tokenId).idx, 0);
+    }
 
     // Kitty Token Tests
+    function test_KittyTokenConstructor() public {
+        assertEq(kittyToken.getKittyConnectAddr(), address(kittyConnect));
+        assertEq(kittyToken.getEthUsdPriceFeed(), networkConfig.ethUsdPriceFeed);
+    }
+
     function test_mintKittyTokenForEth(uint256 amount) public {
         vm.assume(amount != 0 && amount <= 1000000 ether);
         vm.deal(address(this), amount + 1e18);
@@ -185,6 +288,37 @@ contract KittyConnectTest is Test {
         uint256 expectedAmount = (currentPrice * amount) / 1e18;
 
         assertEq(kittyToken.balanceOf(address(this)), expectedAmount);
+    }
+
+    function test_burnFrom(uint256 amount) public {
+        vm.assume(amount != 0 && amount <= 1000000 ether);
+        vm.deal(address(this), amount + 1e18);
+
+        kittyToken.mintKittyTokenForEth{value: amount}();
+        
+        // price is 1 eth = 2265.4981 USD
+        uint256 currentPrice = 2265.4981 ether;   // usdc price
+
+        // now for amount eth, usdc = 2265.4981 * amount
+
+        uint256 expectedAmount = (currentPrice * amount) / 1e18;
+
+        assertEq(kittyToken.balanceOf(address(this)), expectedAmount);
+
+        vm.prank(address(kittyConnect));
+        kittyToken.burnFrom(address(this), expectedAmount);
+        vm.stopPrank();
+
+        assertEq(kittyToken.balanceOf(address(this)), 0);
+    }
+
+    // kittyBridge Tests
+    function test_KittyBridgeConstructor() public {
+        address mockLinkToken = 0x90193C961A926261B756D1E5bb255e67ff9498A1;
+
+        assertEq(kittyBridge.getKittyConnectAddr(), address(kittyConnect));
+        assertEq(kittyBridge.getGaslimit(), 400000);
+        assertEq(kittyBridge.getLinkToken(), mockLinkToken);
     }
 
     function test_gasForCcipReceive() public {
@@ -204,5 +338,143 @@ contract KittyConnectTest is Test {
 
         vm.prank(networkConfig.router);
         kittyBridge.ccipReceive(message);
+    }
+
+    function test_allowlistSenderIsNotOwner() public {
+        address sender = makeAddr("sender");
+
+        vm.expectRevert("Ownable: caller is not the owner");
+        vm.prank(sender);
+        kittyBridge.allowlistSender(sender, true);
+    }
+
+    function test_allowlistSender() public {
+        address sender = makeAddr("sender");
+
+        vm.prank(kittyConnectOwner);
+        kittyBridge.allowlistSender(sender, true);
+
+        assert(kittyBridge.allowlistedSenders(sender) == true);
+    }
+
+    function test_allowlistReceiver() public {
+        address receiver = makeAddr("receiver");
+
+        vm.prank(kittyConnectOwner);
+        kittyBridge.allowlistReceiver(receiver, true);
+
+        assert(kittyBridge.allowlistedReceivers(receiver) == true);
+    }
+
+    function test_allowlistReceiverIsNotOwner() public {
+        address receiver = makeAddr("receiver");
+
+        vm.expectRevert("Ownable: caller is not the owner");
+        vm.prank(receiver);
+        kittyBridge.allowlistReceiver(receiver, true);
+    }
+
+    function test_allowlistDestinationChain() public {
+        uint64 chainId = 1;
+
+        vm.prank(kittyConnectOwner);
+        kittyBridge.allowlistDestinationChain(chainId, true);
+
+        assert(kittyBridge.allowlistedDestinationChains(chainId) == true);
+    }
+
+    function test_allowlistDestinationChainIsNotOwner() public {
+        uint64 chainId = 1;
+        address  attacker = makeAddr("attacker");   
+
+        vm.expectRevert("Ownable: caller is not the owner");
+        vm.prank(attacker);
+        kittyBridge.allowlistDestinationChain(chainId, true);
+    }
+
+    function test_allowlistSourceChain() public {
+        uint64 chainId = 1;
+
+        vm.prank(kittyConnectOwner);
+        kittyBridge.allowlistSourceChain(chainId, true);
+
+        assert(kittyBridge.allowlistedSourceChains(chainId) == true);
+    }
+
+    function test_allowlistSourceChainRevertIfNotOwner() public {
+        uint64 chainId = 1;
+        address attacker = makeAddr("attacker");
+        
+        vm.expectRevert("Ownable: caller is not the owner");
+        vm.prank(attacker);
+        kittyBridge.allowlistSourceChain(chainId, true);
+
+    }
+
+    function test_bridgeNftWithDataIfCallerIsNotKittyConnect() public {
+        address sender = makeAddr("sender");
+        uint64 chainId = 1;
+        bytes memory data = abi.encode(makeAddr("catOwner"), "meowdy", "ragdoll", "ipfs://QmbxwGgBGrNdXPm84kqYskmcMT3jrzBN8LzQjixvkz4c62", block.timestamp, partnerA);
+
+        vm.expectRevert(KittyBridge.KittyBridge__NotKittyConnect.selector);
+        vm.prank(sender);
+        kittyBridge.bridgeNftWithData(chainId, sender, data);
+    }
+
+    function test_bridgeNftWithDataIfDestinationIsNotAllowlisted() public {
+        address sender = makeAddr("sender");
+        uint64 chainId = 1;
+        bytes memory data = abi.encode(makeAddr("catOwner"), "meowdy", "ragdoll", "ipfs://QmbxwGgBGrNdXPm84kqYskmcMT3jrzBN8LzQjixvkz4c62", block.timestamp, partnerA);
+
+        vm.expectRevert(abi.encodeWithSelector(KittyBridge.DestinationChainNotAllowlisted.selector, chainId));
+        vm.prank(address(kittyConnect));
+        kittyBridge.bridgeNftWithData(chainId, sender, data);
+    }
+
+    function test_bridgeNftWithDataIfReceiverIsNotAllowlisted() public {
+        address receiver = makeAddr("receiver");
+        uint64 chainId = 1;
+        bytes memory data = abi.encode(makeAddr("catOwner"), "meowdy", "ragdoll", "ipfs://QmbxwGgBGrNdXPm84kqYskmcMT3jrzBN8LzQjixvkz4c62", block.timestamp, partnerA);
+        
+        vm.prank(kittyConnectOwner);
+        kittyBridge.allowlistDestinationChain(chainId, true);
+
+        vm.expectRevert(KittyBridge.KittyBridge__ReceiverNotAllowlisted.selector);
+        vm.prank(address(kittyConnect));
+        kittyBridge.bridgeNftWithData(chainId, receiver, data);
+    }
+
+    function test_updateGaslimit() public {
+        uint256 newGaslimit = 500000;
+
+        vm.prank(kittyConnectOwner);
+        kittyBridge.updateGaslimit(newGaslimit);
+
+        assertEq(kittyBridge.getGaslimit(), newGaslimit);
+    }
+
+    function test_updateGaslimitRevertIfNotOwner() public {
+        uint256 newGaslimit = 500000;
+        address attacker = makeAddr("attacker");
+
+        vm.expectRevert("Ownable: caller is not the owner");
+        vm.prank(attacker);
+        kittyBridge.updateGaslimit(newGaslimit);
+    }
+
+    function test_withdrawTokenRevertIfNotOwner() public {
+        address attacker = makeAddr("attacker");
+
+        vm.expectRevert("Ownable: caller is not the owner");
+        vm.prank(attacker);
+        kittyBridge.withdrawToken(attacker, address(kittyToken));
+    }
+    
+    function test_withdrawRevertIfNotOwner() public {
+        address attacker = makeAddr("attacker");
+
+        vm.expectRevert("Ownable: caller is not the owner");
+        vm.prank(attacker);
+        kittyBridge.withdraw(attacker);
     }
 }

@@ -290,4 +290,16 @@ contract KittyBridge is CCIPReceiver, Ownable {
     function updateGaslimit(uint256 gasLimit) external onlyOwner {
         gaslimit = gasLimit;
     }
+
+    function getKittyConnectAddr() external view returns (address) {
+        return address(i_kittyConnect);
+    }
+
+    function getGaslimit() external view returns (uint256) {
+        return gaslimit;
+    }
+
+    function getLinkToken() external view returns (address) {
+        return address(s_linkToken);
+    }
 }
