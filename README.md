@@ -1,6 +1,6 @@
 <p align="center">
-<img src="https://th.bing.com/th/id/OIG.dD0gTqhpCpl6Qpf7zabf?w=270&h=270&c=6&r=0&o=5&dpr=1.3&pid=ImgGn" width="500" alt="SantasList">
-<img src="https://th.bing.com/th/id/OIG.G1yBCOUl02a2PGh8_ZZf?w=270&h=270&c=6&r=0&o=5&dpr=1.3&pid=ImgGn" width="500" alt="SantasList">
+<img src="https://th.bing.com/th/id/OIG.dD0gTqhpCpl6Qpf7zabf?w=270&h=270&c=6&r=0&o=5&dpr=1.3&pid=ImgGn" width="300" alt="KittyConnect">
+<img src="https://th.bing.com/th/id/OIG.G1yBCOUl02a2PGh8_ZZf?w=270&h=270&c=6&r=0&o=5&dpr=1.3&pid=ImgGn" width="300" alt="KittyConnect">
 <br/>
 
 # About the Project
