@@ -11,13 +11,14 @@ contract BuyCat is Script {
         address kittyConnectAddr = 0x8F1D72776F7bA4a8208749f30B7c96C2A3b59DD2;
         // address catOwner = 0xa0Ee7A142d267C1f36714E4a8F75612F20a79720;
         address catOwner = 0xE81502D8c3bec299F44Ef3400Bf2e41f7B8947B2;
-        string memory catImageIpfsHash = "ipfs://QmbxwGgBGrNdXPm84kqYskmcMT3jrzBN8LzQjixvkz4c62";
+        // string memory catImageIpfsHash = "ipfs://QmbxwGgBGrNdXPm84kqYskmcMT3jrzBN8LzQjixvkz4c62";
+        string memory catImageIpfsHash = "ipfs://QmNRoyfnxXumyFUE9fWYehDVdLWePUEvNTqXQ45o8JKdsz";
 
         KittyConnect kittyConnect = KittyConnect(kittyConnectAddr);
 
         vm.startBroadcast();
 
-        kittyConnect.mintCatToNewOwner(catOwner, catImageIpfsHash, "Meowdy", "Ragdoll", block.timestamp);
+        kittyConnect.mintCatToNewOwner(catOwner, catImageIpfsHash, "Evee", "Angora", block.timestamp);
 
         vm.stopBroadcast();
 
